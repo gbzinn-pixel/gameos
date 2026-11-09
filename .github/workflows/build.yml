@@ -11,14 +11,20 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
           df -h /
-      - name: Extrair projeto
-        run: tar xzf gamer-os-livebuild*.tar.gz
+      - name: Extrair e corrigir projeto
+        run: |
+          tar xzf gamer-os-livebuild*.tar.gz
+          sed -i 's/curl -fsSL/curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors/g' gamer-os/config/hooks/live/*.hook.chroot
+          sed -i -e '1s|.*|#!/bin/bash|' -e 's|^set -e$|set -eo pipefail|' gamer-os/auto/build
       - name: Gerar ISO
         run: |
           docker run --rm --privileged -v "$PWD/gamer-os":/build -w /build debian:trixie bash -c "apt-get update && apt-get install -y live-build && chmod +x auto/* config/hooks/live/* && lb config && lb build"
       - name: Ajustar permissões
         if: always()
         run: sudo chown -R "$USER" gamer-os
+      - name: Conferir se a ISO existe
+        run: |
+          ls -lh gamer-os/*.iso
       - uses: actions/upload-artifact@v4
         if: always()
         with:
