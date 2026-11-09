@@ -1,0 +1,29 @@
+name: Build GamerOS ISO
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Liberar espaço
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
+          df -h /
+      - name: Extrair projeto
+        run: tar xzf gamer-os-livebuild*.tar.gz
+      - name: Gerar ISO
+        run: |
+          docker run --rm --privileged -v "$PWD/gamer-os":/build -w /build debian:trixie bash -c "apt-get update && apt-get install -y live-build && chmod +x auto/* config/hooks/live/* && lb config && lb build"
+      - name: Ajustar permissões
+        if: always()
+        run: sudo chown -R "$USER" gamer-os
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameros
+          path: |
+            gamer-os/*.iso
+            gamer-os/build.log
+          compression-level: 0
