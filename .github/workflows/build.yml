@@ -18,6 +18,7 @@ jobs:
           tar xzf gamer-os-v2.tar.gz
           sed -i 's/curl -fsSL/curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors/g' gamer-os/config/hooks/live/*.hook.chroot
           sed -i -e '1s|.*|#!/bin/bash|' -e 's|^set -e$|set -eo pipefail|' gamer-os/auto/build
+          printf 'user-setup\nlive-tools\niproute2\n' >> gamer-os/config/package-lists/base.list.chroot
       - name: Gerar ISO
         run: |
           docker run --rm --privileged -v "$PWD/gamer-os":/build -w /build debian:trixie bash -c "apt-get update && apt-get install -y live-build && chmod +x auto/* config/hooks/live/* && lb config && lb build"
@@ -28,6 +29,9 @@ jobs:
         run: |
           ls -lh gamer-os/*.iso
           sha256sum gamer-os/*.iso | tee gamer-os/SHA256SUMS
+      - name: Conferir user-setup na ISO
+        run: |
+          grep -A8 '^Package: user-setup$' gamer-os/chroot/var/lib/dpkg/status | grep -q 'install ok installed'
       - name: Publicar Release
         env:
           GH_TOKEN: ${{ github.token }}
