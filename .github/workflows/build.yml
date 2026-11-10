@@ -1,6 +1,8 @@
 name: Build GamerOS ISO
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -13,7 +15,7 @@ jobs:
           df -h /
       - name: Extrair e corrigir projeto
         run: |
-          tar xzf gamer-os-livebuild*.tar.gz
+          tar xzf gamer-os-v2.tar.gz
           sed -i 's/curl -fsSL/curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors/g' gamer-os/config/hooks/live/*.hook.chroot
           sed -i -e '1s|.*|#!/bin/bash|' -e 's|^set -e$|set -eo pipefail|' gamer-os/auto/build
       - name: Gerar ISO
@@ -25,11 +27,16 @@ jobs:
       - name: Conferir se a ISO existe
         run: |
           ls -lh gamer-os/*.iso
+          sha256sum gamer-os/*.iso | tee gamer-os/SHA256SUMS
+      - name: Publicar Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ github.run_number }}" gamer-os/*.iso gamer-os/SHA256SUMS \
+            --title "GamerOS build ${{ github.run_number }}" \
+            --notes "ISO gerada automaticamente."
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gameros
-          path: |
-            gamer-os/*.iso
-            gamer-os/build.log
-          compression-level: 0
+          name: build-log
+          path: gamer-os/build.log
