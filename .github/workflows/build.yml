@@ -15,10 +15,9 @@ jobs:
           df -h /
       - name: Extrair e corrigir projeto
         run: |
-          tar xzf gamer-os-v2.tar.gz
+          tar xzf gamer-os-v3.tar.gz
           sed -i 's/curl -fsSL/curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors/g' gamer-os/config/hooks/live/*.hook.chroot
           sed -i -e '1s|.*|#!/bin/bash|' -e 's|^set -e$|set -eo pipefail|' gamer-os/auto/build
-          printf 'user-setup\nlive-tools\niproute2\n' >> gamer-os/config/package-lists/base.list.chroot
       - name: Gerar ISO
         run: |
           docker run --rm --privileged -v "$PWD/gamer-os":/build -w /build debian:trixie bash -c "apt-get update && apt-get install -y live-build && chmod +x auto/* config/hooks/live/* && lb config && lb build"
